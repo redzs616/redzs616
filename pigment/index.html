@@ -1,0 +1,1510 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pingament</title>
+<meta name="description" content="Pingament — rajzoló és annotáló stúdió">
+<meta name="theme-color" content="#0c0c10">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+
+<style>
+:root {
+  --bg: #0c0c10;
+  --surface: #121217;
+  --surface-2: #191920;
+  --border: #1e1e26;
+  --border-2: #2a2a35;
+  --accent: #b8975e;
+  --accent-glow: rgba(184,151,94,0.11);
+  --canvas-bg: #09090c;
+  --text: #dddad4;
+  --text-2: #8a877f;
+  --text-3: #3c3a36;
+  --ring: rgba(185,175,155,0.55);
+  --ring-erase: rgba(210,100,80,0.65);
+  --mono: 'SF Mono','Cascadia Code','Fira Mono',Consolas,'Courier New',monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #edeae4; --surface: #e4e0d9; --surface-2: #d9d4cd;
+    --border: #ccc7be; --border-2: #b8b3aa; --accent: #7a6035;
+    --accent-glow: rgba(122,96,53,0.1); --canvas-bg: #f6f3ee;
+    --text: #1c1a18; --text-2: #7a776f; --text-3: #c0bbb4;
+    --ring: rgba(60,50,40,0.45); --ring-erase: rgba(200,60,40,0.6);
+  }
+}
+:root[data-theme="light"] {
+  --bg: #edeae4; --surface: #e4e0d9; --surface-2: #d9d4cd;
+  --border: #ccc7be; --border-2: #b8b3aa; --accent: #7a6035;
+  --accent-glow: rgba(122,96,53,0.1); --canvas-bg: #f6f3ee;
+  --text: #1c1a18; --text-2: #7a776f; --text-3: #c0bbb4;
+  --ring: rgba(60,50,40,0.45); --ring-erase: rgba(200,60,40,0.6);
+}
+:root[data-theme="dark"] {
+  --bg: #0c0c10; --surface: #121217; --surface-2: #191920;
+  --border: #1e1e26; --border-2: #2a2a35; --accent: #b8975e;
+  --accent-glow: rgba(184,151,94,0.11); --canvas-bg: #09090c;
+  --text: #dddad4; --text-2: #8a877f; --text-3: #3c3a36;
+  --ring: rgba(185,175,155,0.55); --ring-erase: rgba(210,100,80,0.65);
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); }
+body {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app { display: flex; height: 100vh; height: 100dvh; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 182px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-2) transparent;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
+.sb-body {
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.brand-mark {
+  width: 13px; height: 13px;
+  border: 1.5px solid var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.brand-name {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  font-weight: 700;
+  color: var(--text);
+  user-select: none;
+}
+.brand-theme {
+  margin-left: auto;
+  width: 22px; height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 70ms, border-color 70ms;
+}
+.brand-theme:hover { color: var(--accent); border-color: var(--border-2); }
+
+.lbl {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+
+/* ── Tool grid (2 cols) ── */
+.tool-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.t-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 44px;
+  padding: 4px 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: color 70ms, background 70ms, border-color 70ms;
+}
+.t-btn:hover { color: var(--text); border-color: var(--border-2); }
+.t-btn.active { color: var(--accent); background: var(--accent-glow); border-color: var(--accent); }
+.t-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.t-btn svg { flex-shrink: 0; }
+
+.active-tool {
+  font-size: 9px;
+  color: var(--text-3);
+  letter-spacing: 0.12em;
+  text-align: center;
+  padding: 3px 0 0;
+}
+
+/* ── Size ── */
+.size-row { display: flex; gap: 4px; margin-bottom: 7px; }
+.size-pre {
+  flex: 1; height: 28px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 70ms, background 70ms;
+}
+.size-pre:hover { border-color: var(--border-2); }
+.size-pre.active { border-color: var(--accent); background: var(--accent-glow); }
+.size-pre .dot { border-radius: 50%; background: var(--text-2); flex-shrink: 0; }
+.size-pre.active .dot { background: var(--accent); }
+
+.slider-row { display: flex; align-items: center; gap: 7px; }
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  height: 2px; background: var(--border-2); border-radius: 2px;
+  flex: 1; cursor: pointer; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 11px; height: 11px;
+  border-radius: 50%; background: var(--accent); cursor: pointer;
+  transition: transform 100ms;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+input[type="range"]::-moz-range-thumb {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--accent); border: none; cursor: pointer;
+}
+.val { font-size: 10px; color: var(--text-2); min-width: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Color grid ── */
+.color-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 4px; margin-bottom: 7px; }
+.swatch {
+  aspect-ratio: 1; border-radius: 3px; cursor: pointer;
+  border: 2px solid transparent; outline: none;
+  transition: transform 70ms, border-color 70ms; position: relative;
+}
+.swatch:hover { transform: scale(1.12); z-index: 2; }
+.swatch.active { border-color: var(--text); transform: scale(1.08); z-index: 2; }
+.swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.active-color {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 7px; border: 1px solid var(--border-2);
+  border-radius: 4px; background: var(--surface-2);
+}
+.active-dot { width: 11px; height: 11px; border-radius: 2px; border: 1px solid rgba(128,128,128,0.22); flex-shrink: 0; }
+.active-name { color: var(--text-2); font-size: 9.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Egyéni színválasztó ── */
+.custom-color { display: flex; gap: 4px; margin-top: 6px; }
+.custom-color input[type="color"] {
+  width: 30px; height: 26px; padding: 0; border: 1px solid var(--border-2);
+  border-radius: 4px; background: var(--surface-2); cursor: pointer; flex-shrink: 0;
+}
+.custom-color input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+.custom-color input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+.custom-color input[type="text"] {
+  flex: 1; min-width: 0; height: 26px; padding: 0 7px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text); font-family: var(--mono);
+  font-size: 10px; letter-spacing: 0.05em; outline: none;
+}
+.custom-color input[type="text"]:focus { border-color: var(--accent); }
+
+/* ── Szöveg stílus ── */
+.sel {
+  width: 100%; height: 28px; padding: 0 7px; margin-bottom: 5px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text); font-family: var(--mono);
+  font-size: 10px; cursor: pointer; outline: none;
+}
+.sel:focus { border-color: var(--accent); }
+.tstyle-row { display: flex; gap: 4px; }
+.tstyle-btn {
+  flex: 1; height: 28px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text-2); font-size: 13px; cursor: pointer;
+  transition: color 70ms, background 70ms, border-color 70ms;
+}
+.tstyle-btn:hover { color: var(--text); border-color: var(--border-2); }
+.tstyle-btn.on { color: var(--accent); background: var(--accent-glow); border-color: var(--accent); }
+.tstyle-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Toggle switches (effects) ── */
+.fx-group { display: flex; flex-direction: column; gap: 3px; }
+.fx-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 4px;
+  cursor: pointer; user-select: none;
+  transition: border-color 70ms;
+}
+.fx-row:hover { border-color: var(--border-2); }
+.fx-row .fx-name { flex: 1; color: var(--text-2); font-size: 10px; letter-spacing: 0.04em; }
+.fx-row.on .fx-name { color: var(--text); }
+.fx-sw {
+  width: 26px; height: 14px; border-radius: 8px;
+  background: var(--border-2); position: relative; flex-shrink: 0;
+  transition: background 120ms;
+}
+.fx-sw::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--text-2); transition: transform 120ms, background 120ms;
+}
+.fx-row.on .fx-sw { background: var(--accent); }
+.fx-row.on .fx-sw::after { transform: translateX(12px); background: #fff; }
+
+/* ── Actions ── */
+.action-group { display: flex; flex-direction: column; gap: 3px; }
+.action-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 8px; background: transparent;
+  border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text-2); font-family: var(--mono); font-size: 11px;
+  cursor: pointer; width: 100%; text-align: left; line-height: 1;
+  transition: color 70ms, background 70ms, border-color 70ms;
+}
+.action-btn:hover { color: var(--text); background: var(--surface-2); border-color: var(--border-2); }
+.action-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.aico { font-size: 12px; width: 13px; text-align: center; flex-shrink: 0; }
+
+/* ── Footer ── */
+.sb-foot { padding: 9px 12px; border-top: 1px solid var(--border); background: var(--surface); }
+.coords { font-size: 10px; color: var(--text-3); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+
+/* ── Canvas ── */
+.canvas-wrap { flex: 1; position: relative; background: var(--canvas-bg); overflow: hidden; touch-action: none; }
+.canvas-wrap canvas { position: absolute; inset: 0; display: block; pointer-events: none; }
+.canvas-wrap.grid-on::before {
+  content: ''; position: absolute; inset: 0; z-index: 15; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(128,128,128,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(128,128,128,0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ── Rétegek ── */
+.layer-list { display: flex; flex-direction: column-reverse; gap: 3px; }
+.layer-item {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 5px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 4px;
+  cursor: pointer; transition: border-color 70ms;
+}
+.layer-item:hover { border-color: var(--border-2); }
+.layer-item.active { border-color: var(--accent); background: var(--accent-glow); }
+.layer-item .layer-name { flex: 1; color: var(--text-2); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.layer-item.active .layer-name { color: var(--text); }
+.layer-item.hidden-l .layer-name { color: var(--text-3); text-decoration: line-through; }
+.lbtn {
+  width: 16px; height: 16px; flex-shrink: 0;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text-2); display: flex; align-items: center; justify-content: center;
+  border-radius: 3px; padding: 0; transition: color 70ms, background 70ms;
+}
+.lbtn:hover { color: var(--text); background: var(--border); }
+.lbtn svg { display: block; }
+
+/* ── Text overlay ── */
+.text-overlay {
+  position: absolute;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px dashed rgba(184,151,94,0.65);
+  outline: none;
+  padding: 2px 1px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: text;
+  z-index: 20;
+  line-height: 1.25;
+  min-width: 60px;
+}
+
+/* ── Cursor ring ── */
+.cursor-ring {
+  position: fixed; border-radius: 50%;
+  border: 1px solid var(--ring); pointer-events: none;
+  transform: translate(-50%,-50%); z-index: 1000; display: none;
+}
+.cursor-ring.erasing { border-color: var(--ring-erase); border-style: dashed; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface-2); border: 1px solid var(--border-2);
+  color: var(--text); padding: 8px 16px; border-radius: 6px;
+  font-size: 11px; letter-spacing: 0.04em; z-index: 2000;
+  opacity: 0; pointer-events: none; transition: opacity 180ms, transform 180ms;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Shortcuts hint ── */
+.shortcuts { font-size: 9px; letter-spacing: 0.08em; color: var(--text-3); line-height: 1.9; }
+.shortcuts span { color: var(--text-2); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-body">
+
+      <header class="brand">
+        <div class="brand-mark"></div>
+        <span class="brand-name">PINGAMENT</span>
+        <button class="brand-theme" id="themeBtn" title="Téma váltása" aria-label="Téma váltása">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+            <circle cx="8" cy="8" r="3.2"/>
+            <path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </header>
+
+      <section>
+        <label class="lbl">ESZKÖZ</label>
+        <div class="tool-grid" id="toolGrid"></div>
+        <div class="active-tool" id="activeToolName">TOLL</div>
+      </section>
+
+      <section>
+        <label class="lbl">MÉRET</label>
+        <div class="size-row" id="sizeRow">
+          <button class="size-pre" data-size="2" title="2 px"><span class="dot" style="width:2px;height:2px;"></span></button>
+          <button class="size-pre" data-size="8" title="8 px"><span class="dot" style="width:5px;height:5px;"></span></button>
+          <button class="size-pre active" data-size="20" title="20 px"><span class="dot" style="width:9px;height:9px;"></span></button>
+          <button class="size-pre" data-size="40" title="40 px"><span class="dot" style="width:12px;height:12px;"></span></button>
+        </div>
+        <div class="slider-row">
+          <input type="range" id="sizeSlider" min="1" max="80" value="20" aria-label="Méret">
+          <span class="val" id="sizeVal">20</span>
+        </div>
+      </section>
+
+      <section>
+        <label class="lbl">PIGMENT</label>
+        <div class="color-grid" id="colorGrid" role="group" aria-label="Színpaletta"></div>
+        <div class="active-color">
+          <div class="active-dot" id="activeDot"></div>
+          <span class="active-name" id="activeName">Elefántcsontfekete</span>
+        </div>
+        <div class="custom-color">
+          <input type="color" id="colorPick" value="#1e1b18" aria-label="Egyéni szín">
+          <input type="text" id="hexInput" maxlength="7" value="#1e1b18" spellcheck="false" aria-label="HEX kód">
+        </div>
+        <div class="slider-row" style="margin-top:9px;">
+          <label class="lbl" for="opacitySlider" style="margin-bottom:0;white-space:nowrap;flex-shrink:0;">ÁTLÁTSZÓSÁG</label>
+          <input type="range" id="opacitySlider" min="5" max="100" value="100" aria-label="Átlátszóság">
+          <span class="val" id="opacityVal">100</span>
+        </div>
+      </section>
+
+      <section>
+        <label class="lbl">SZÖVEG STÍLUS</label>
+        <select id="fontSel" class="sel" aria-label="Betűtípus">
+          <option value="'Helvetica Neue',Arial,sans-serif">Sans</option>
+          <option value="Georgia,'Times New Roman',serif">Serif</option>
+          <option value="var(--mono)">Mono</option>
+          <option value="'Comic Sans MS','Segoe Print',cursive">Kézírás</option>
+          <option value="'Brush Script MT',cursive">Ecset</option>
+          <option value="Impact,'Arial Black',sans-serif">Vastag</option>
+        </select>
+        <div class="tstyle-row">
+          <button class="tstyle-btn" id="boldBtn" title="Félkövér" style="font-weight:800;">F</button>
+          <button class="tstyle-btn" id="italicBtn" title="Dőlt" style="font-style:italic;font-family:Georgia,serif;">D</button>
+          <button class="tstyle-btn" id="underBtn" title="Aláhúzott" style="text-decoration:underline;">A</button>
+        </div>
+      </section>
+
+      <section>
+        <label class="lbl">EFFEKTEK</label>
+        <div class="fx-group" id="fxGroup">
+          <div class="fx-row" data-fx="glow"><span class="fx-name">Ragyogás</span><span class="fx-sw"></span></div>
+          <div class="fx-row" data-fx="symmetry"><span class="fx-name">Tükör-szimmetria</span><span class="fx-sw"></span></div>
+          <div class="fx-row" data-fx="kaleido"><span class="fx-name">Kaleidoszkóp ×6</span><span class="fx-sw"></span></div>
+          <div class="fx-row" data-fx="fillshape"><span class="fx-name">Alakzat kitöltése</span><span class="fx-sw"></span></div>
+          <div class="fx-row" data-fx="grid"><span class="fx-name">Rács</span><span class="fx-sw"></span></div>
+        </div>
+      </section>
+
+      <section>
+        <label class="lbl">RÉTEGEK</label>
+        <div class="layer-list" id="layerList"></div>
+        <button class="action-btn" id="addLayerBtn" style="margin-top:5px;"><span class="aico">+</span> Új réteg</button>
+        <div class="slider-row" style="margin-top:8px;">
+          <label class="lbl" for="layerOp" style="margin-bottom:0;white-space:nowrap;flex-shrink:0;">ÁTL.</label>
+          <input type="range" id="layerOp" min="0" max="100" value="100" aria-label="Réteg átlátszóság">
+          <span class="val" id="layerOpVal">100</span>
+        </div>
+      </section>
+
+      <section>
+        <label class="lbl">MŰVELETEK</label>
+        <div class="action-group">
+          <button class="action-btn" id="imgBtn"><span class="aico">⤢</span> Kép betöltése</button>
+          <input type="file" id="imgInput" accept="image/*" hidden>
+          <button class="action-btn" id="undoBtn"><span class="aico">↩</span> Visszavonás</button>
+          <button class="action-btn" id="redoBtn"><span class="aico">↪</span> Újra</button>
+          <button class="action-btn" id="clearBtn"><span class="aico">×</span> Törlés</button>
+          <button class="action-btn" id="saveBtn"><span class="aico">↓</span> Mentés PNG</button>
+          <button class="action-btn" id="saveTransBtn"><span class="aico">⬚</span> Átlátszó PNG</button>
+        </div>
+      </section>
+
+      <section class="shortcuts" style="margin-top:auto;">
+        <div><span>P</span> toll&nbsp;<span>E</span> radír&nbsp;<span>H</span> kiemelő</div>
+        <div><span>B</span> szóró&nbsp;<span>N</span> neon&nbsp;<span>T</span> szöveg</div>
+        <div><span>G</span> kitöltés&nbsp;<span>I</span> pipetta</div>
+        <div><span>⌘Z</span> vissza&nbsp;<span>⌘⇧Z</span> újra</div>
+      </section>
+
+    </div>
+
+    <footer class="sb-foot">
+      <div class="coords" id="coordDisplay">x: — &nbsp; y: —</div>
+    </footer>
+  </aside>
+
+  <main class="canvas-wrap" id="canvasWrap" aria-label="Rajzvászon"></main>
+</div>
+
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Pigmentek ──
+const PIGMENTS = [
+  { name: 'Titánfehér',          hex: '#f2ede6' },
+  { name: 'Elefántcsontfekete',  hex: '#1e1b18' },
+  { name: 'Égetett sziéna',      hex: '#b5532a' },
+  { name: 'Nyers umbra',         hex: '#7a5c3a' },
+  { name: 'Sárga okker',         hex: '#c8953c' },
+  { name: 'Kadmiumsárga',        hex: '#f0c040' },
+  { name: 'Vermilion',           hex: '#d43f30' },
+  { name: 'Karmin',              hex: '#8c1f2e' },
+  { name: 'Ultramarin',          hex: '#2a4faa' },
+  { name: 'Porosz kék',          hex: '#1c3d5a' },
+  { name: 'Viridin',             hex: '#2a7a5e' },
+  { name: 'Nedveszöld',          hex: '#3d6b3a' },
+];
+
+// ── Eszközök (ikon + felirat + típus) ──
+const TOOLS = [
+  { id:'pen',         name:'Toll',      cat:'brush', icon:'M11 2.5L13.5 5 6 12.5H3.5V10L11 2.5Z|M9 4.5L11.5 7' },
+  { id:'eraser',      name:'Radír',     cat:'brush', icon:'R' },
+  { id:'highlighter', name:'Kiemelő',   cat:'brush', icon:'HL' },
+  { id:'spray',       name:'Szóró',     cat:'brush', icon:'SP' },
+  { id:'neon',        name:'Neon',      cat:'brush', icon:'NE' },
+  { id:'rainbow',     name:'Szivárvány',cat:'brush', icon:'RB' },
+  { id:'calli',       name:'Kalligráf', cat:'brush', icon:'CA' },
+  { id:'ribbon',      name:'Szalag',    cat:'brush', icon:'SZ' },
+  { id:'fur',         name:'Pók/szőr',  cat:'brush', icon:'FU' },
+  { id:'fire',        name:'Tűz',       cat:'anim',  icon:'FR' },
+  { id:'stardust',    name:'Csillagpor',cat:'anim',  icon:'SD' },
+  { id:'smoke',       name:'Füst',      cat:'anim',  icon:'SM' },
+  { id:'fill',        name:'Kitöltés',  cat:'util',  icon:'FI' },
+  { id:'eyedrop',     name:'Pipetta',   cat:'util',  icon:'EY' },
+  { id:'text',        name:'Szöveg',    cat:'util',  icon:'TX' },
+  { id:'line',        name:'Vonal',     cat:'shape', icon:'LI' },
+  { id:'arrow',       name:'Nyíl',      cat:'shape', icon:'AR' },
+  { id:'rect',        name:'Téglalap',  cat:'shape', icon:'RE' },
+  { id:'ellipse',     name:'Kör',       cat:'shape', icon:'EL' },
+  { id:'poly',        name:'Sokszög',   cat:'shape', icon:'PO' },
+  { id:'star',        name:'Csillag',   cat:'shape', icon:'ST' },
+  { id:'bubble',      name:'Buborék',   cat:'shape', icon:'BU' },
+  { id:'heart',       name:'Szív',      cat:'stamp', icon:'HE' },
+  { id:'sparkle',     name:'Csillám',   cat:'stamp', icon:'SK' },
+  { id:'sun',         name:'Nap',       cat:'stamp', icon:'SU' },
+  { id:'moon',        name:'Hold',      cat:'stamp', icon:'MO' },
+  { id:'flower',      name:'Virág',     cat:'stamp', icon:'FL' },
+  { id:'bolt',        name:'Villám',    cat:'stamp', icon:'BO' },
+  { id:'gradient',    name:'Átmenet',   cat:'shape', icon:'GR' },
+  { id:'pixelate',    name:'Elhom.',    cat:'util',  icon:'PX' },
+];
+const TOOL_NAMES = {};
+TOOLS.forEach(t=>TOOL_NAMES[t.id]=t.name.toUpperCase());
+
+const SHAPE_TOOLS = new Set(['line','arrow','rect','ellipse','poly','star','bubble','gradient']);
+const ANIM_TOOLS = new Set(['fire','stardust','smoke']);
+const BRUSH_TOOLS = new Set(['pen','eraser','highlighter','spray','neon','rainbow','calli','ribbon','fur','fire','stardust','smoke']);
+const STAMP_TOOLS = new Set(['heart','sparkle','sun','moon','flower','bolt']);
+const PRESET_SIZES = [2, 8, 20, 40];
+
+// ── SVG ikonok (egyszerű, egységes) ──
+const ICONS = {
+  pen:'<path d="M11 2.5L13.5 5 6 12.5H3.5V10L11 2.5Z"/><line x1="9" y1="4.5" x2="11.5" y2="7"/>',
+  eraser:'<path d="M2.5 12.5L7.5 7.5 12 5.5 13.5 7 9 11.5H2.5V12.5Z"/><line x1="1.5" y1="13.5" x2="14.5" y2="13.5"/>',
+  highlighter:'<rect x="3" y="4" width="10" height="5" rx="2.5"/><line x1="5" y1="11" x2="11" y2="11" stroke-width="2.4"/>',
+  spray:'<circle cx="8" cy="9" r="0.7"/><circle cx="5.5" cy="7" r="0.7"/><circle cx="10.5" cy="7" r="0.7"/><circle cx="6.5" cy="11" r="0.7"/><circle cx="9.5" cy="11" r="0.7"/><circle cx="8" cy="5" r="0.7"/><circle cx="4" cy="10" r="0.7"/><circle cx="12" cy="10" r="0.7"/>',
+  neon:'<path d="M3 8c2-3 8-3 10 0" stroke-width="2.6" opacity="0.4"/><path d="M3 8c2-3 8-3 10 0" stroke-width="1"/>',
+  rainbow:'<path d="M2 12a6 6 0 0 1 12 0" stroke-width="1.3"/><path d="M4 12a4 4 0 0 1 8 0" stroke-width="1.3"/>',
+  calli:'<path d="M3.5 12.5L12 3.5" stroke-width="2.6" stroke-linecap="butt"/>',
+  ribbon:'<path d="M2 10c3-5 9 5 12 0" stroke-width="1.4"/>',
+  fur:'<line x1="8" y1="8" x2="8" y2="3"/><line x1="8" y1="8" x2="3" y2="6"/><line x1="8" y1="8" x2="13" y2="6"/><line x1="8" y1="8" x2="4.5" y2="12"/><line x1="8" y1="8" x2="11.5" y2="12"/>',
+  fire:'<path d="M8 14c3 0 4.5-2 4.5-4.2 0-2.6-2.2-3.4-1.8-6.3C9 5 7.5 6 7.5 8.2 6.8 7.7 6.5 6.8 6.7 5.6 5 7 3.5 8 3.5 9.8 3.5 12 5 14 8 14Z"/>',
+  stardust:'<circle cx="4" cy="5" r="0.9"/><circle cx="9" cy="3.5" r="1.2"/><circle cx="12.5" cy="6" r="0.8"/><circle cx="6.5" cy="8.5" r="1"/><circle cx="11" cy="10.5" r="1.1"/><circle cx="4.5" cy="12" r="0.9"/><circle cx="8" cy="13" r="0.7"/>',
+  smoke:'<path d="M4 13c-1.5-1 0-3 1-3.5-1.5-1 0-3.2 1.5-2.8-.8-1.6 1-3.2 2.5-2.4C9.3 2 12 3 11.5 5.2 13.2 5 14 6.8 12.8 7.8 14 8.6 13.4 11 11.8 10.8 11.5 12.5 9 13 8 11.8 7.4 13 5 13.6 4 13Z"/>',
+  fill:'<path d="M6 2.5l5.5 5.5-4.5 4.5a1.4 1.4 0 0 1-2 0L2.5 9a1.4 1.4 0 0 1 0-2z"/><path d="M12.5 10.5c0 1-1.5 2-1.5 0 0-.8 1.5-2 1.5 0Z" fill="currentColor"/>',
+  eyedrop:'<path d="M10.5 2.5a1.8 1.8 0 0 1 2.5 2.5l-1 1 1 1-1.2 1.2-1-1-5 5L3 13l-.5-1.8 5-5-1-1L7.7 4l1 1z"/>',
+  text:'<line x1="3" y1="3.5" x2="13" y2="3.5"/><line x1="8" y1="3.5" x2="8" y2="13"/><line x1="5.5" y1="13" x2="10.5" y2="13"/>',
+  line:'<line x1="2.5" y1="13.5" x2="13.5" y2="2.5"/>',
+  arrow:'<line x1="3" y1="13" x2="13" y2="3"/><polyline points="13,3 13,8 8,3"/>',
+  rect:'<rect x="2.5" y="3.5" width="11" height="9" rx="1"/>',
+  ellipse:'<ellipse cx="8" cy="8" rx="5.5" ry="4.5"/>',
+  poly:'<polygon points="8,2.5 13.5,6.5 11.4,13 4.6,13 2.5,6.5"/>',
+  star:'<polygon points="8,2 9.6,6.2 14,6.4 10.6,9.2 11.8,13.5 8,11 4.2,13.5 5.4,9.2 2,6.4 6.4,6.2"/>',
+  bubble:'<path d="M2 2.5h12v8H9.5L8 13l-1.5-2.5H2V2.5Z"/>',
+  heart:'<path d="M8 13.5C3 10 1.5 7 2.8 4.8 3.8 3 6 3 8 5.2 10 3 12.2 3 13.2 4.8 14.5 7 13 10 8 13.5Z"/>',
+  sparkle:'<path d="M8 2l1.2 4.6L14 8l-4.8 1.4L8 14l-1.2-4.6L2 8l4.8-1.4z"/>',
+  sun:'<circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.3 3.3l1.3 1.3M11.4 11.4l1.3 1.3M12.7 3.3l-1.3 1.3M4.6 11.4l-1.3 1.3"/>',
+  moon:'<path d="M12 10.5A5.5 5.5 0 0 1 6 2.2 5.5 5.5 0 1 0 12 10.5Z"/>',
+  flower:'<circle cx="8" cy="8" r="1.6"/><ellipse cx="8" cy="3.8" rx="1.8" ry="2.4"/><ellipse cx="8" cy="12.2" rx="1.8" ry="2.4"/><ellipse cx="3.8" cy="8" rx="2.4" ry="1.8"/><ellipse cx="12.2" cy="8" rx="2.4" ry="1.8"/>',
+  bolt:'<path d="M9 1.5L3.5 9H7l-1 5.5L12.5 7H9z"/>',
+  gradient:'<rect x="2" y="3" width="12" height="10" rx="1"/><defs><linearGradient id="gi" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="currentColor" stop-opacity="0.9"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs><rect x="2.8" y="3.8" width="10.4" height="8.4" rx="0.5" fill="url(#gi)" stroke="none"/>',
+  pixelate:'<rect x="2" y="2" width="4" height="4"/><rect x="7" y="2" width="4" height="4" opacity="0.5"/><rect x="2" y="7" width="4" height="4" opacity="0.5"/><rect x="7" y="7" width="4" height="4"/><rect x="11.5" y="4" width="3" height="3" opacity="0.6"/><rect x="4" y="11.5" width="3" height="3" opacity="0.6"/>',
+};
+
+// ── Állapot ──
+let tool='pen', color=PIGMENTS[1], size=20, alpha=1, drawing=false;
+let lx=0, ly=0, lmx=0, lmy=0;
+let snapshot=null, offCanvas=null, offCtx=null;
+let shapeStart={x:0,y:0};
+let textOverlay=null;
+let hue=0;                 // szivárvány
+let sprayTimer=null, sprayPos={x:0,y:0};
+const fx={ glow:false, symmetry:false, kaleido:false, fillshape:false, grid:false };
+const textStyle={ font:"'Helvetica Neue',Arial,sans-serif", bold:false, italic:false, underline:false };
+
+const undoStack=[], redoStack=[];
+const MAX_H=24;
+
+// ── DOM ──
+const wrap=document.getElementById('canvasWrap');
+let canvas=null, ctx=null;        // aktív réteg vászna + kontextusa
+const layers=[];                  // {id,name,canvas,ctx,visible,opacity}
+let activeLayer=0, layerSeq=0;
+const ring=document.getElementById('cursorRing');
+const coordEl=document.getElementById('coordDisplay');
+const sizeSlider=document.getElementById('sizeSlider');
+const sizeValEl=document.getElementById('sizeVal');
+const opSlider=document.getElementById('opacitySlider');
+const opValEl=document.getElementById('opacityVal');
+const activeDot=document.getElementById('activeDot');
+const activeName=document.getElementById('activeName');
+const activeToolEl=document.getElementById('activeToolName');
+const toastEl=document.getElementById('toast');
+const layerListEl=document.getElementById('layerList');
+const layerOpSlider=document.getElementById('layerOp');
+const layerOpValEl=document.getElementById('layerOpVal');
+const colorPick=document.getElementById('colorPick');
+const hexInput=document.getElementById('hexInput');
+
+// ── Segédek ──
+function hexToRgb(h){const n=parseInt(h.slice(1),16);return [(n>>16)&255,(n>>8)&255,n&255];}
+function curRgb(){ return tool==='rainbow' ? hslToRgb(hue,0.85,0.55) : hexToRgb(color.hex); }
+function hslToRgb(h,s,l){
+  h/=360; const q=l<0.5?l*(1+s):l+s-l*s, p=2*l-q;
+  const f=t=>{ if(t<0)t+=1; if(t>1)t-=1;
+    if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; };
+  return [Math.round(f(h+1/3)*255),Math.round(f(h)*255),Math.round(f(h-1/3)*255)];
+}
+let toastT=null;
+function toast(msg){
+  toastEl.textContent=msg; toastEl.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),1400);
+}
+
+function applyCtx(){
+  if(!ctx)return;
+  ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=size;
+  ctx.shadowBlur=0; ctx.shadowColor='transparent';
+  if(tool==='eraser'){
+    ctx.globalCompositeOperation='destination-out';
+    ctx.strokeStyle='rgba(0,0,0,1)'; ctx.fillStyle='rgba(0,0,0,1)';
+  } else {
+    ctx.globalCompositeOperation='source-over';
+    const [r,g,b]=curRgb();
+    ctx.strokeStyle=`rgba(${r},${g},${b},${alpha})`;
+    ctx.fillStyle=`rgba(${r},${g},${b},${alpha})`;
+    if(fx.glow){ ctx.shadowBlur=Math.max(size,12); ctx.shadowColor=`rgba(${r},${g},${b},0.9)`; }
+  }
+}
+
+// ── Réteg-infrastruktúra ──
+function makeLayer(name){
+  const c=document.createElement('canvas');
+  const {width:w,height:h}=wrap.getBoundingClientRect();
+  c.width=Math.max(1,w|0); c.height=Math.max(1,h|0);
+  const cx=c.getContext('2d',{willReadFrequently:true});
+  wrap.appendChild(c);
+  return { id:++layerSeq, name:name||('Réteg '+(layerSeq)), canvas:c, ctx:cx, visible:true, opacity:1 };
+}
+function setActive(i){
+  activeLayer=Math.max(0,Math.min(i,layers.length-1));
+  canvas=layers[activeLayer].canvas; ctx=layers[activeLayer].ctx;
+  layerOpSlider.value=Math.round(layers[activeLayer].opacity*100);
+  layerOpValEl.textContent=layerOpSlider.value;
+  applyCtx(); renderLayers();
+}
+function restackLayers(){
+  layers.forEach((l,i)=>{ l.canvas.style.zIndex=i; l.canvas.style.opacity=l.visible?l.opacity:0; });
+}
+function renderLayers(){
+  layerListEl.innerHTML='';
+  layers.forEach((l,i)=>{
+    const item=document.createElement('div');
+    item.className='layer-item'+(i===activeLayer?' active':'')+(l.visible?'':' hidden-l');
+    const eye=l.visible
+      ? '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z"/><circle cx="8" cy="8" r="1.8"/></svg>'
+      : '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8M3 11.5 13 4.5M6.3 9.7A2 2 0 0 0 9.7 6.3"/></svg>';
+    item.innerHTML=
+      `<button class="lbtn lvis" title="Láthatóság">${eye}</button>`+
+      `<span class="layer-name">${l.name}</span>`+
+      `<button class="lbtn lup" title="Előrébb"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M4 7l4-4 4 4"/></svg></button>`+
+      `<button class="lbtn ldel" title="Törlés"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>`;
+    item.addEventListener('click',e=>{ if(e.target.closest('.lbtn'))return; setActive(i); });
+    item.querySelector('.lvis').addEventListener('click',e=>{ e.stopPropagation(); l.visible=!l.visible; restackLayers(); renderLayers(); });
+    item.querySelector('.lup').addEventListener('click',e=>{ e.stopPropagation(); moveLayer(i,1); });
+    item.querySelector('.ldel').addEventListener('click',e=>{ e.stopPropagation(); delLayer(i); });
+    layerListEl.appendChild(item);
+  });
+}
+function addLayer(){
+  const l=makeLayer(); layers.push(l); restackLayers(); setActive(layers.length-1); toast('Új réteg: '+l.name);
+}
+function delLayer(i){
+  if(layers.length<=1){ toast('Legalább egy réteg kell'); return; }
+  layers[i].canvas.remove(); layers.splice(i,1);
+  restackLayers(); setActive(Math.min(activeLayer,layers.length-1));
+}
+function moveLayer(i,dir){
+  const j=i+dir; if(j<0||j>=layers.length)return;
+  const wasActive=i===activeLayer;
+  [layers[i],layers[j]]=[layers[j],layers[i]];
+  restackLayers(); setActive(wasActive?j:activeLayer);
+}
+
+// ── Vászon ──
+function resize(){
+  const {width:w,height:h}=wrap.getBoundingClientRect();
+  if(!w||!h)return;
+  const W=w|0, H=h|0;
+  layers.forEach(l=>{
+    if(l.canvas.width===W&&l.canvas.height===H)return;
+    let snap=null;
+    if(l.canvas.width&&l.canvas.height) snap=l.ctx.getImageData(0,0,l.canvas.width,l.canvas.height);
+    l.canvas.width=W; l.canvas.height=H;
+    if(snap) l.ctx.putImageData(snap,0,0);
+  });
+  applyCtx();
+}
+function saveH(){
+  undoStack.push({id:layers[activeLayer].id, img:ctx.getImageData(0,0,canvas.width,canvas.height)});
+  if(undoStack.length>MAX_H) undoStack.shift();
+  redoStack.length=0;
+}
+function layerById(id){ return layers.find(l=>l.id===id); }
+function restoreTo(entry){
+  const l=layerById(entry.id); if(!l)return false;
+  const i=layers.indexOf(l);
+  if(i!==activeLayer) setActive(i);
+  ctx.putImageData(entry.img,0,0); applyCtx(); return true;
+}
+function undo(){
+  if(!undoStack.length){ toast('Nincs mit visszavonni'); return; }
+  const entry=undoStack.pop(), l=layerById(entry.id);
+  if(l) redoStack.push({id:entry.id, img:l.ctx.getImageData(0,0,l.canvas.width,l.canvas.height)});
+  restoreTo(entry);
+}
+function redo(){
+  if(!redoStack.length){ toast('Nincs mit újracsinálni'); return; }
+  const entry=redoStack.pop(), l=layerById(entry.id);
+  if(l) undoStack.push({id:entry.id, img:l.ctx.getImageData(0,0,l.canvas.width,l.canvas.height)});
+  restoreTo(entry);
+}
+function evtPos(e){
+  const r=wrap.getBoundingClientRect();
+  const s=e.touches?e.touches[0]:e;
+  return { x:s.clientX-r.left, y:s.clientY-r.top };
+}
+
+// ── Szimmetria / kaleidoszkóp pont-leképezés ──
+function mirrorPoints(x,y){
+  const pts=[{x,y}];
+  const cx=canvas.width/2, cy=canvas.height/2;
+  if(fx.symmetry) pts.push({x:canvas.width-x,y});
+  if(fx.kaleido){
+    pts.length=0;
+    const dx=x-cx, dy=y-cy, baseA=Math.atan2(dy,dx), rad=Math.hypot(dx,dy);
+    for(let i=0;i<6;i++){
+      const a=baseA+i*Math.PI/3;
+      pts.push({x:cx+Math.cos(a)*rad, y:cy+Math.sin(a)*rad});
+      pts.push({x:cx+Math.cos(-a)*rad, y:cy+Math.sin(-a)*rad});
+    }
+  }
+  return pts;
+}
+
+// ── Pontszerű rajz (minden tükörpontra) ──
+function stroke(x1,y1,x2,y2){
+  mirrorPoints(x2,y2).forEach((p2,i)=>{
+    const p1=mirrorPoints(x1,y1)[i];
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+  });
+}
+
+// ── Toll (sima bezier + sebesség-vékonyodás) ──
+function startPen(x,y){
+  saveH(); applyCtx(); drawing=true; lx=x;ly=y;lmx=x;lmy=y;
+  mirrorPoints(x,y).forEach(p=>{
+    ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(ctx.lineWidth/2,0.5),0,7); ctx.fill();
+  });
+}
+function movePen(x,y){
+  if(!drawing)return;
+  const d=Math.hypot(x-lx,y-ly);
+  const spd=Math.min(d*0.22,size*0.38);
+  ctx.lineWidth=Math.max(1,size-spd);
+  const mx=(lx+x)/2,my=(ly+y)/2;
+  mirrorPoints(x,y).forEach((p,i)=>{
+    const a=mirrorPoints(lx,ly)[i], b=mirrorPoints(lmx,lmy)[i], m=mirrorPoints(mx,my)[i];
+    ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.quadraticCurveTo(a.x,a.y,m.x,m.y); ctx.stroke();
+  });
+  lx=x;ly=y;lmx=mx;lmy=my;
+}
+function endPen(){ drawing=false; ctx.lineWidth=size; }
+
+// ── Kiemelő (offscreen, nem felhalmozó) ──
+function startHL(x,y){
+  saveH();
+  snapshot=ctx.getImageData(0,0,canvas.width,canvas.height);
+  offCanvas=document.createElement('canvas');
+  offCanvas.width=canvas.width; offCanvas.height=canvas.height;
+  offCtx=offCanvas.getContext('2d');
+  const [r,g,b]=curRgb();
+  offCtx.strokeStyle=`rgb(${r},${g},${b})`;
+  offCtx.lineWidth=Math.max(size,18); offCtx.lineCap='square'; offCtx.lineJoin='bevel';
+  drawing=true; lx=x;ly=y;lmx=x;lmy=y;
+  offCtx.beginPath(); offCtx.arc(x,y,offCtx.lineWidth/2,0,7); offCtx.fill();
+}
+function moveHL(x,y){
+  if(!drawing)return;
+  const mx=(lx+x)/2,my=(ly+y)/2;
+  offCtx.beginPath(); offCtx.moveTo(lmx,lmy); offCtx.quadraticCurveTo(lx,ly,mx,my); offCtx.stroke();
+  ctx.putImageData(snapshot,0,0);
+  ctx.save(); ctx.globalAlpha=0.38; ctx.drawImage(offCanvas,0,0); ctx.restore();
+  lx=x;ly=y;lmx=mx;lmy=my;
+}
+function endHL(){ drawing=false; snapshot=null; offCtx=null; offCanvas=null; }
+
+// ── Szórópisztoly ──
+function sprayDot(x,y){
+  const [r,g,b]=curRgb(); const rad=size, n=Math.max(6,size|0);
+  ctx.save(); ctx.globalCompositeOperation='source-over';
+  mirrorPoints(x,y).forEach(p=>{
+    for(let i=0;i<n;i++){
+      const a=Math.random()*7, rr=Math.random()*rad;
+      ctx.fillStyle=`rgba(${r},${g},${b},${alpha*(0.5+Math.random()*0.5)})`;
+      ctx.fillRect(p.x+Math.cos(a)*rr, p.y+Math.sin(a)*rr, 1.2, 1.2);
+    }
+  });
+  ctx.restore();
+}
+function startSpray(x,y){
+  saveH(); drawing=true; sprayPos={x,y}; sprayDot(x,y);
+  sprayTimer=setInterval(()=>{ if(drawing) sprayDot(sprayPos.x,sprayPos.y); },40);
+}
+function moveSpray(x,y){ if(drawing){ sprayPos={x,y}; sprayDot(x,y); } }
+function endSpray(){ drawing=false; clearInterval(sprayTimer); sprayTimer=null; }
+
+// ── Neon (dupla stroke: halo + mag) ──
+function startNeon(x,y){ saveH(); drawing=true; lx=x;ly=y;lmx=x;lmy=y; }
+function moveNeon(x,y){
+  if(!drawing)return;
+  const [r,g,b]=curRgb(); const mx=(lx+x)/2,my=(ly+y)/2;
+  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle=`rgba(${r},${g},${b},0.22)`; ctx.lineWidth=size*2.4; ctx.shadowBlur=size*1.6; ctx.shadowColor=`rgb(${r},${g},${b})`;
+  stroke2(lmx,lmy,lx,ly,mx,my);
+  ctx.strokeStyle='rgba(255,255,255,0.95)'; ctx.lineWidth=Math.max(1.5,size*0.35); ctx.shadowBlur=0;
+  stroke2(lmx,lmy,lx,ly,mx,my);
+  ctx.restore();
+  lx=x;ly=y;lmx=mx;lmy=my;
+}
+function stroke2(bx,by,ax,ay,mx,my){
+  mirrorPoints(mx,my).forEach((m,i)=>{
+    const a=mirrorPoints(ax,ay)[i], b=mirrorPoints(bx,by)[i];
+    ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.quadraticCurveTo(a.x,a.y,m.x,m.y); ctx.stroke();
+  });
+}
+function endNeon(){ drawing=false; }
+
+// ── Szivárvány (toll + folyamatos hue) ──
+function startRainbow(x,y){ saveH(); drawing=true; lx=x;ly=y;lmx=x;lmy=y; }
+function moveRainbow(x,y){
+  if(!drawing)return;
+  hue=(hue+4)%360; const [r,g,b]=hslToRgb(hue,0.85,0.55);
+  ctx.save(); ctx.globalCompositeOperation='source-over'; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle=`rgba(${r},${g},${b},${alpha})`; ctx.lineWidth=size;
+  if(fx.glow){ ctx.shadowBlur=size; ctx.shadowColor=`rgb(${r},${g},${b})`; }
+  const mx=(lx+x)/2,my=(ly+y)/2; stroke2(lmx,lmy,lx,ly,mx,my);
+  ctx.restore(); lx=x;ly=y;lmx=mx;lmy=my;
+}
+function endRainbow(){ drawing=false; }
+
+// ── Kalligráfia (szögtoll: perpendikuláris szélesség) ──
+function startCalli(x,y){ saveH(); applyCtx(); drawing=true; lx=x;ly=y; }
+function moveCalli(x,y){
+  if(!drawing)return;
+  const [r,g,b]=curRgb(); const w=size, ang=Math.PI/4, ox=Math.cos(ang)*w/2, oy=Math.sin(ang)*w/2;
+  ctx.save(); ctx.globalCompositeOperation='source-over'; ctx.fillStyle=`rgba(${r},${g},${b},${alpha})`;
+  if(fx.glow){ ctx.shadowBlur=size; ctx.shadowColor=`rgb(${r},${g},${b})`; }
+  mirrorPoints(x,y).forEach((p2,i)=>{
+    const p1=mirrorPoints(lx,ly)[i];
+    ctx.beginPath();
+    ctx.moveTo(p1.x-ox,p1.y-oy); ctx.lineTo(p1.x+ox,p1.y+oy);
+    ctx.lineTo(p2.x+ox,p2.y+oy); ctx.lineTo(p2.x-ox,p2.y-oy);
+    ctx.closePath(); ctx.fill();
+  });
+  ctx.restore(); lx=x;ly=y;
+}
+function endCalli(){ drawing=false; }
+
+// ── Szalag (sebességfüggő vastag szalag, átlátszó) ──
+function startRibbon(x,y){ saveH(); drawing=true; lx=x;ly=y;lmx=x;lmy=y; }
+function moveRibbon(x,y){
+  if(!drawing)return;
+  const [r,g,b]=curRgb(); const d=Math.hypot(x-lx,y-ly), w=Math.min(size*1.8, size*0.5+d);
+  ctx.save(); ctx.globalCompositeOperation='source-over'; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle=`rgba(${r},${g},${b},${alpha*0.85})`; ctx.lineWidth=w;
+  if(fx.glow){ ctx.shadowBlur=size; ctx.shadowColor=`rgb(${r},${g},${b})`; }
+  const mx=(lx+x)/2,my=(ly+y)/2; stroke2(lmx,lmy,lx,ly,mx,my);
+  ctx.restore(); lx=x;ly=y;lmx=mx;lmy=my;
+}
+function endRibbon(){ drawing=false; }
+
+// ── Pók/szőr (szomszédos pontokhoz húzott szálak) ──
+let furPts=[];
+function startFur(x,y){ saveH(); drawing=true; furPts=[{x,y}]; }
+function moveFur(x,y){
+  if(!drawing)return;
+  const [r,g,b]=curRgb();
+  ctx.save(); ctx.globalCompositeOperation='source-over'; ctx.strokeStyle=`rgba(${r},${g},${b},${alpha*0.5})`; ctx.lineWidth=0.6;
+  if(fx.glow){ ctx.shadowBlur=size*0.6; ctx.shadowColor=`rgb(${r},${g},${b})`; }
+  mirrorPoints(x,y).forEach((p,mi)=>{
+    furPts.forEach(q=>{
+      const qq=mirrorPoints(q.x,q.y)[mi];
+      if(Math.hypot(p.x-qq.x,p.y-qq.y)<size*2){
+        ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(qq.x,qq.y); ctx.stroke();
+      }
+    });
+  });
+  ctx.restore();
+  furPts.push({x,y}); if(furPts.length>48) furPts.shift();
+}
+function endFur(){ drawing=false; furPts=[]; }
+
+// ── Animált részecske-ecsetek ──
+let particles=[], animRAF=null, animDown=false, animPos={x:0,y:0};
+const ANIM_PRESETS={
+  fire:    { rate:5, life:[26,46], spd:[0.4,1.6], ang:[-2.07,-1.07], grav:-0.05, sz:[0.4,1.0], comp:'lighter', kind:'fire' },
+  stardust:{ rate:3, life:[40,80], spd:[0.1,0.9], ang:[0,6.283], grav:0,     sz:[0.18,0.6], comp:'lighter', kind:'star' },
+  smoke:   { rate:3, life:[55,95], spd:[0.2,0.9], ang:[-2.14,-1.0], grav:-0.015,sz:[0.7,1.8], comp:'source-over', kind:'smoke', drift:0.35 }
+};
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function spawnParticles(){
+  if(particles.length>1500) return;
+  const P=ANIM_PRESETS[tool], base=Math.max(size,8)*0.28;
+  mirrorPoints(animPos.x,animPos.y).forEach(pt=>{
+    for(let i=0;i<P.rate;i++){
+      const a=rnd(P.ang[0],P.ang[1]), s=rnd(P.spd[0],P.spd[1]), life=rnd(P.life[0],P.life[1])|0;
+      let r,g,b;
+      if(P.kind==='fire'){ [r,g,b]=hslToRgb(rnd(8,45),1,rnd(0.5,0.62)); }
+      else if(P.kind==='smoke'){ const v=rnd(120,200)|0; r=g=b=v; }
+      else { [r,g,b]=curRgb(); }
+      particles.push({ x:pt.x, y:pt.y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, life, maxLife:life, rad:rnd(P.sz[0],P.sz[1])*base, r,g,b });
+    }
+  });
+}
+function animLoop(){
+  const P=ANIM_PRESETS[tool]||ANIM_PRESETS.fire;
+  if(animDown) spawnParticles();
+  if(ctx){
+    ctx.save(); ctx.globalCompositeOperation=P.comp;
+    for(const p of particles){
+      p.x+=p.vx; p.y+=p.vy; p.vy+=P.grav;
+      if(P.drift) p.vx+=rnd(-P.drift,P.drift)*0.1;
+      p.life--;
+      const t=p.life/p.maxLife;
+      let a=alpha*t;
+      if(P.kind==='star') a=alpha*Math.abs(Math.sin(p.life*0.4))*t;
+      if(P.kind==='smoke') a=alpha*0.14*t;
+      if(a<=0) continue;
+      ctx.fillStyle=`rgba(${p.r},${p.g},${p.b},${a})`;
+      ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(0.5,p.rad*(P.kind==='smoke'?(2-t):1)),0,6.283); ctx.fill();
+    }
+    ctx.restore();
+  }
+  particles=particles.filter(p=>p.life>0);
+  if(animDown||particles.length){ animRAF=requestAnimationFrame(animLoop); }
+  else { animRAF=null; applyCtx(); }
+}
+function startAnim(x,y){ saveH(); animDown=true; drawing=true; animPos={x,y}; if(!animRAF) animRAF=requestAnimationFrame(animLoop); }
+function moveAnim(x,y){ if(animDown) animPos={x,y}; }
+function endAnim(){ animDown=false; drawing=false; }
+
+// ── Alakzatok (snapshot preview) ──
+function startShape(x,y){
+  saveH(); snapshot=ctx.getImageData(0,0,canvas.width,canvas.height);
+  shapeStart={x,y}; drawing=true;
+}
+function moveShape(x,y){
+  if(!drawing)return;
+  ctx.putImageData(snapshot,0,0); applyCtx(); drawShape(tool,shapeStart.x,shapeStart.y,x,y);
+}
+function endShape(x,y){
+  const bw=Math.abs(x-shapeStart.x), bh=Math.abs(y-shapeStart.y);
+  if(tool==='bubble'&&bw>24&&bh>24){
+    const bx=Math.min(shapeStart.x,x), by=Math.min(shapeStart.y,y);
+    openText(bx+10,by+8,bw-20);
+  }
+  drawing=false; snapshot=null;
+}
+function fillOrStroke(){ if(fx.fillshape&&tool!=='line'&&tool!=='arrow') ctx.fill(); ctx.stroke(); }
+function drawShape(t,x1,y1,x2,y2){
+  switch(t){
+    case 'line': ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); break;
+    case 'arrow': drawArrow(x1,y1,x2,y2); break;
+    case 'rect': { const rx=Math.min(x1,x2),ry=Math.min(y1,y2);
+      ctx.beginPath(); ctx.rect(rx,ry,Math.abs(x2-x1),Math.abs(y2-y1)); fillOrStroke(); break; }
+    case 'ellipse': ctx.beginPath();
+      ctx.ellipse((x1+x2)/2,(y1+y2)/2,Math.abs(x2-x1)/2,Math.abs(y2-y1)/2,0,0,7); fillOrStroke(); break;
+    case 'poly': drawPolygon(x1,y1,x2,y2,5); break;
+    case 'star': drawStar(x1,y1,x2,y2,5); break;
+    case 'bubble': drawBubble(x1,y1,x2,y2); break;
+  }
+}
+function drawArrow(x1,y1,x2,y2){
+  const ang=Math.atan2(y2-y1,x2-x1), hLen=Math.max(size*3,16);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-hLen*Math.cos(ang-Math.PI/6),y2-hLen*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-hLen*Math.cos(ang+Math.PI/6),y2-hLen*Math.sin(ang+Math.PI/6));
+  ctx.closePath(); ctx.fill();
+}
+function drawPolygon(x1,y1,x2,y2,n){
+  const cx=(x1+x2)/2, cy=(y1+y2)/2, rx=Math.abs(x2-x1)/2, ry=Math.abs(y2-y1)/2;
+  ctx.beginPath();
+  for(let i=0;i<n;i++){ const a=-Math.PI/2+i*2*Math.PI/n;
+    const px=cx+Math.cos(a)*rx, py=cy+Math.sin(a)*ry; i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+  ctx.closePath(); fillOrStroke();
+}
+function drawStar(x1,y1,x2,y2,pts){
+  const cx=(x1+x2)/2, cy=(y1+y2)/2, R=Math.max(Math.abs(x2-x1),Math.abs(y2-y1))/2, r=R*0.42;
+  ctx.beginPath();
+  for(let i=0;i<pts*2;i++){ const rad=i%2?r:R, a=-Math.PI/2+i*Math.PI/pts;
+    const px=cx+Math.cos(a)*rad, py=cy+Math.sin(a)*rad; i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+  ctx.closePath(); fillOrStroke();
+}
+function drawBubble(x1,y1,x2,y2){
+  const bx=Math.min(x1,x2),by=Math.min(y1,y2),bw=Math.abs(x2-x1),bh=Math.abs(y2-y1);
+  if(bw<10||bh<10)return;
+  const r=Math.min(10,bw/4,bh/4), tW=Math.min(14,bw/4), tH=Math.min(12,bh/3), tX=bx+r*2+tW;
+  ctx.beginPath(); ctx.moveTo(bx+r,by);
+  ctx.lineTo(bx+bw-r,by); ctx.quadraticCurveTo(bx+bw,by,bx+bw,by+r);
+  ctx.lineTo(bx+bw,by+bh-r); ctx.quadraticCurveTo(bx+bw,by+bh,bx+bw-r,by+bh);
+  ctx.lineTo(tX+tW,by+bh); ctx.lineTo(tX,by+bh+tH); ctx.lineTo(tX-tW,by+bh);
+  ctx.lineTo(bx+r,by+bh); ctx.quadraticCurveTo(bx,by+bh,bx,by+bh-r);
+  ctx.lineTo(bx,by+r); ctx.quadraticCurveTo(bx,by,bx+r,by);
+  ctx.closePath(); fillOrStroke();
+}
+
+// ── Pecsétek (kattintásra) ──
+function stampAt(x,y){
+  saveH(); const s=Math.max(size,16), [r,g,b]=curRgb();
+  ctx.save(); ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle=`rgba(${r},${g},${b},${alpha})`; ctx.strokeStyle=`rgba(${r},${g},${b},${alpha})`;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  if(fx.glow){ ctx.shadowBlur=s; ctx.shadowColor=`rgb(${r},${g},${b})`; }
+  mirrorPoints(x,y).forEach(p=>drawStamp(tool,p.x,p.y,s));
+  ctx.restore();
+}
+function drawStamp(t,cx,cy,s){
+  switch(t){
+    case 'heart': pathHeart(cx,cy,s); ctx.fill(); break;
+    case 'sparkle': pathSparkle(cx,cy,s); ctx.fill(); break;
+    case 'sun': pathSun(cx,cy,s); break;
+    case 'moon': pathMoon(cx,cy,s); ctx.fill(); break;
+    case 'flower': pathFlower(cx,cy,s); break;
+    case 'bolt': pathBolt(cx,cy,s); ctx.fill(); break;
+  }
+}
+function pathHeart(cx,cy,s){
+  const u=s/16; ctx.beginPath();
+  ctx.moveTo(cx,cy+5*u);
+  ctx.bezierCurveTo(cx-9*u,cy-3*u,cx-5*u,cy-9*u,cx,cy-4*u);
+  ctx.bezierCurveTo(cx+5*u,cy-9*u,cx+9*u,cy-3*u,cx,cy+5*u);
+  ctx.closePath();
+}
+function pathSparkle(cx,cy,s){
+  const R=s/2, r=R*0.38; ctx.beginPath();
+  for(let i=0;i<8;i++){ const rad=i%2?r:R, a=-Math.PI/2+i*Math.PI/4;
+    const px=cx+Math.cos(a)*rad, py=cy+Math.sin(a)*rad; i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+  ctx.closePath();
+}
+function pathSun(cx,cy,s){
+  const R=s*0.3; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
+  ctx.lineWidth=Math.max(1.5,s*0.08);
+  for(let i=0;i<8;i++){ const a=i*Math.PI/4;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*R*1.35, cy+Math.sin(a)*R*1.35);
+    ctx.lineTo(cx+Math.cos(a)*R*1.95, cy+Math.sin(a)*R*1.95); ctx.stroke(); }
+}
+function pathMoon(cx,cy,s){
+  const R=s*0.42; ctx.beginPath();
+  ctx.arc(cx,cy,R,Math.PI*0.5,Math.PI*1.5,false);
+  ctx.arc(cx-R*0.35,cy,R*0.85,Math.PI*1.5,Math.PI*0.5,true);
+  ctx.closePath();
+}
+function pathFlower(cx,cy,s){
+  const R=s*0.42;
+  for(let i=0;i<5;i++){ const a=-Math.PI/2+i*2*Math.PI/5;
+    const px=cx+Math.cos(a)*R*0.6, py=cy+Math.sin(a)*R*0.6;
+    ctx.beginPath(); ctx.ellipse(px,py,R*0.5,R*0.3,a,0,7); ctx.fill(); }
+  ctx.save(); ctx.fillStyle=ctx.strokeStyle='rgba(255,255,255,0.85)';
+  ctx.beginPath(); ctx.arc(cx,cy,R*0.26,0,7); ctx.fill(); ctx.restore();
+}
+function pathBolt(cx,cy,s){
+  const u=s/16; ctx.beginPath();
+  ctx.moveTo(cx+u,cy-7*u); ctx.lineTo(cx-4*u,cy+u); ctx.lineTo(cx-0.5*u,cy+u);
+  ctx.lineTo(cx-1.5*u,cy+7*u); ctx.lineTo(cx+4*u,cy-1*u); ctx.lineTo(cx+0.5*u,cy-1*u);
+  ctx.closePath();
+}
+
+// ── Színátmenet (húzás = irány, teljes téglalap kitöltése) ──
+function startGradient(x,y){ saveH(); snapshot=ctx.getImageData(0,0,canvas.width,canvas.height); shapeStart={x,y}; drawing=true; }
+function moveGradient(x,y){
+  if(!drawing)return;
+  ctx.putImageData(snapshot,0,0);
+  const gx=Math.min(shapeStart.x,x), gy=Math.min(shapeStart.y,y), gw=Math.abs(x-shapeStart.x), gh=Math.abs(y-shapeStart.y);
+  const [r,g,b]=hexToRgb(color.hex);
+  const grad=ctx.createLinearGradient(shapeStart.x,shapeStart.y,x,y);
+  grad.addColorStop(0,`rgba(${r},${g},${b},${alpha})`);
+  grad.addColorStop(1,`rgba(${r},${g},${b},0)`);
+  ctx.save(); ctx.globalCompositeOperation='source-over'; ctx.fillStyle=grad;
+  ctx.fillRect(gx,gy,gw,gh); ctx.restore();
+}
+function endGradient(){ drawing=false; snapshot=null; }
+
+// ── Kitöltés (flood fill) ──
+function floodFill(sx,sy){
+  saveH();
+  const W=canvas.width,H=canvas.height;
+  const id=ctx.getImageData(0,0,W,H), d=id.data;
+  const i0=(sy*W+sx)*4;
+  const tr=d[i0],tg=d[i0+1],tb=d[i0+2],ta=d[i0+3];
+  const [fr,fg,fb]=hexToRgb(color.hex), fa=Math.round(alpha*255);
+  if(tr===fr&&tg===fg&&tb===fb&&ta===fa) return;
+  const tol=48;
+  const match=i=>Math.abs(d[i]-tr)<=tol&&Math.abs(d[i+1]-tg)<=tol&&Math.abs(d[i+2]-tb)<=tol&&Math.abs(d[i+3]-ta)<=tol;
+  const st=[sx,sy];
+  while(st.length){
+    const y=st.pop(),x=st.pop(), i=(y*W+x)*4;
+    if(x<0||y<0||x>=W||y>=H||!match(i)) continue;
+    d[i]=fr;d[i+1]=fg;d[i+2]=fb;d[i+3]=fa;
+    st.push(x+1,y,x-1,y,x,y+1,x,y-1);
+  }
+  ctx.putImageData(id,0,0);
+}
+
+// ── Pipetta ──
+function pickAt(x,y){
+  const p=ctx.getImageData(Math.round(x),Math.round(y),1,1).data;
+  if(p[3]===0){ toast('Üres pont'); return; }
+  const hex='#'+[p[0],p[1],p[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
+  color={name:`Felvett ${hex}`,hex};
+  activeDot.style.background=hex; activeName.textContent=color.name;
+  grid.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
+  applyCtx(); toast('Szín felvéve: '+hex);
+}
+
+// ── Elhomályosítás ──
+function startPixel(x,y){ saveH(); snapshot=ctx.getImageData(0,0,canvas.width,canvas.height); shapeStart={x,y}; drawing=true; }
+function movePixel(x,y){
+  if(!drawing)return;
+  ctx.putImageData(snapshot,0,0);
+  ctx.save(); ctx.strokeStyle='rgba(184,151,94,0.75)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  ctx.strokeRect(Math.min(shapeStart.x,x),Math.min(shapeStart.y,y),Math.abs(x-shapeStart.x),Math.abs(y-shapeStart.y));
+  ctx.restore();
+}
+function endPixel(x,y){
+  drawing=false; ctx.putImageData(snapshot,0,0);
+  const px=Math.min(shapeStart.x,x),py=Math.min(shapeStart.y,y),pw=Math.abs(x-shapeStart.x),ph=Math.abs(y-shapeStart.y);
+  if(pw>4&&ph>4) pixelate(Math.round(px),Math.round(py),Math.round(pw),Math.round(ph));
+  snapshot=null;
+}
+function pixelate(x,y,w,h){
+  const bs=Math.max(8,size>>1), id=ctx.getImageData(x,y,w,h), d=id.data;
+  for(let by=0;by<h;by+=bs)for(let bx=0;bx<w;bx+=bs){
+    let r=0,g=0,b=0,a=0,n=0;
+    for(let dy=0;dy<bs&&by+dy<h;dy++)for(let dx=0;dx<bs&&bx+dx<w;dx++){
+      const i=((by+dy)*w+(bx+dx))*4; r+=d[i];g+=d[i+1];b+=d[i+2];a+=d[i+3];n++; }
+    r=r/n|0;g=g/n|0;b=b/n|0;a=a/n|0;
+    for(let dy=0;dy<bs&&by+dy<h;dy++)for(let dx=0;dx<bs&&bx+dx<w;dx++){
+      const i=((by+dy)*w+(bx+dx))*4; d[i]=r;d[i+1]=g;d[i+2]=b;d[i+3]=a; }
+  }
+  ctx.putImageData(id,x,y);
+}
+
+// ── Szöveg overlay ──
+const MONO_STACK="'SF Mono','Cascadia Code','Fira Mono',Consolas,'Courier New',monospace";
+function resolveFont(f){ return f==='var(--mono)' ? MONO_STACK : f; }
+function styleOverlay(el){
+  el.style.fontFamily=textStyle.font;
+  el.style.fontWeight=textStyle.bold?'800':'400';
+  el.style.fontStyle=textStyle.italic?'italic':'normal';
+  el.style.textDecoration=textStyle.underline?'underline':'none';
+}
+function openText(x,y,maxW){
+  if(textOverlay) commitText();
+  const el=document.createElement('div');
+  el.contentEditable='true'; el.className='text-overlay';
+  const fs=Math.max(size,12), [r,g,b]=curRgb();
+  el.style.left=x+'px'; el.style.top=y+'px'; el.style.maxWidth=(maxW||240)+'px';
+  el.style.fontSize=fs+'px'; el.style.color=`rgb(${r},${g},${b})`;
+  styleOverlay(el);
+  wrap.appendChild(el); textOverlay={el,x,y,fs};
+  requestAnimationFrame(()=>el.focus());
+  el.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); commitText(); }
+    if(e.key==='Escape'){ if(wrap.contains(el)) wrap.removeChild(el); textOverlay=null; }
+  });
+  el.addEventListener('blur',()=>{ if(textOverlay) commitText(); });
+}
+function commitText(){
+  if(!textOverlay)return;
+  const {el,x,y,fs}=textOverlay, text=el.innerText.replace(/\s+$/,'');
+  if(text){
+    saveH(); const [r,g,b]=curRgb();
+    ctx.save(); ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=alpha;
+    ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.strokeStyle=`rgb(${r},${g},${b})`;
+    const parts=(textStyle.italic?'italic ':'')+(textStyle.bold?'800 ':'');
+    ctx.font=`${parts}${fs}px ${resolveFont(textStyle.font)}`; ctx.textBaseline='top';
+    if(fx.glow){ ctx.shadowBlur=fs*0.6; ctx.shadowColor=`rgb(${r},${g},${b})`; }
+    text.split('\n').forEach((line,i)=>{
+      const ly=y+i*fs*1.3;
+      ctx.fillText(line,x,ly);
+      if(textStyle.underline&&line.trim()){
+        const w=ctx.measureText(line).width;
+        ctx.lineWidth=Math.max(1,fs*0.06);
+        ctx.beginPath(); ctx.moveTo(x,ly+fs*1.08); ctx.lineTo(x+w,ly+fs*1.08); ctx.stroke();
+      }
+    });
+    ctx.restore();
+  }
+  if(wrap.contains(el)) wrap.removeChild(el);
+  textOverlay=null; applyCtx();
+}
+
+// ── Főesemény-diszpécser ──
+function onDown(e){
+  if(e.target&&e.target.closest&&e.target.closest('.text-overlay')) return;
+  const {x,y}=evtPos(e);
+  if(tool==='pen'||tool==='eraser') startPen(x,y);
+  else if(tool==='highlighter') startHL(x,y);
+  else if(tool==='spray') startSpray(x,y);
+  else if(tool==='neon') startNeon(x,y);
+  else if(tool==='rainbow') startRainbow(x,y);
+  else if(tool==='calli') startCalli(x,y);
+  else if(tool==='ribbon') startRibbon(x,y);
+  else if(tool==='fur') startFur(x,y);
+  else if(ANIM_TOOLS.has(tool)) startAnim(x,y);
+  else if(tool==='text'){ openText(x,y); }
+  else if(tool==='fill') floodFill(Math.round(x),Math.round(y));
+  else if(tool==='eyedrop') pickAt(x,y);
+  else if(STAMP_TOOLS.has(tool)) stampAt(x,y);
+  else if(tool==='gradient') startGradient(x,y);
+  else if(SHAPE_TOOLS.has(tool)) startShape(x,y);
+  else if(tool==='pixelate') startPixel(x,y);
+}
+function onMove(e){
+  if(e.touches) e.preventDefault();
+  const cx=e.touches?e.touches[0].clientX:e.clientX;
+  const cy=e.touches?e.touches[0].clientY:e.clientY;
+  const {x,y}=evtPos(e);
+  if(BRUSH_TOOLS.has(tool)){
+    ring.style.left=cx+'px'; ring.style.top=cy+'px';
+    const rs=Math.max(size,6); ring.style.width=rs+'px'; ring.style.height=rs+'px';
+  }
+  coordEl.textContent=`x: ${Math.round(x)}   y: ${Math.round(y)}`;
+  if(!drawing)return;
+  if(tool==='pen'||tool==='eraser') movePen(x,y);
+  else if(tool==='highlighter') moveHL(x,y);
+  else if(tool==='spray') moveSpray(x,y);
+  else if(tool==='neon') moveNeon(x,y);
+  else if(tool==='rainbow') moveRainbow(x,y);
+  else if(tool==='calli') moveCalli(x,y);
+  else if(tool==='ribbon') moveRibbon(x,y);
+  else if(tool==='fur') moveFur(x,y);
+  else if(ANIM_TOOLS.has(tool)) moveAnim(x,y);
+  else if(tool==='gradient') moveGradient(x,y);
+  else if(SHAPE_TOOLS.has(tool)) moveShape(x,y);
+  else if(tool==='pixelate') movePixel(x,y);
+}
+function onUp(e){
+  if(!drawing)return;
+  const {x,y}=evtPos(e);
+  if(tool==='pen'||tool==='eraser') endPen();
+  else if(tool==='highlighter') endHL();
+  else if(tool==='spray') endSpray();
+  else if(tool==='neon') endNeon();
+  else if(tool==='rainbow') endRainbow();
+  else if(tool==='calli') endCalli();
+  else if(tool==='ribbon') endRibbon();
+  else if(tool==='fur') endFur();
+  else if(ANIM_TOOLS.has(tool)) endAnim();
+  else if(tool==='gradient') endGradient();
+  else if(SHAPE_TOOLS.has(tool)) endShape(x,y);
+  else if(tool==='pixelate') endPixel(x,y);
+}
+
+// ── Eszközváltás ──
+function selectTool(t){
+  if(drawing){ drawing=false; snapshot=null; animDown=false; if(sprayTimer){clearInterval(sprayTimer);sprayTimer=null;}
+    if(offCtx){offCtx=null;offCanvas=null;} }
+  if(textOverlay) commitText();
+  tool=t;
+  document.querySelectorAll('.t-btn').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));
+  activeToolEl.textContent=TOOL_NAMES[t];
+  ring.classList.toggle('erasing',t==='eraser');
+  if(BRUSH_TOOLS.has(t)){ wrap.style.cursor='none'; }
+  else if(t==='text'){ wrap.style.cursor='text'; ring.style.display='none'; }
+  else if(t==='fill'||t==='eyedrop'||STAMP_TOOLS.has(t)){ wrap.style.cursor='pointer'; ring.style.display='none'; }
+  else { wrap.style.cursor='crosshair'; ring.style.display='none'; }
+  applyCtx();
+}
+
+// ── Eszköz-grid kirajzolás ──
+const toolGrid=document.getElementById('toolGrid');
+TOOLS.forEach(t=>{
+  const b=document.createElement('button');
+  b.className='t-btn'+(t.id==='pen'?' active':''); b.dataset.tool=t.id;
+  b.innerHTML=`<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[t.id]}</svg>${t.name}`;
+  b.title=t.name;
+  b.addEventListener('click',()=>selectTool(t.id));
+  toolGrid.appendChild(b);
+});
+
+// ── Színpaletta ──
+const grid=document.getElementById('colorGrid');
+PIGMENTS.forEach((p,i)=>{
+  const btn=document.createElement('button');
+  btn.className='swatch'+(i===1?' active':'');
+  btn.style.background=p.hex; btn.title=p.name; btn.setAttribute('aria-label',p.name);
+  btn.addEventListener('click',()=>pickColor(i));
+  grid.appendChild(btn);
+});
+function pickColor(i){
+  color=PIGMENTS[i];
+  grid.querySelectorAll('.swatch').forEach((s,j)=>s.classList.toggle('active',j===i));
+  activeDot.style.background=color.hex; activeName.textContent=color.name;
+  colorPick.value=color.hex; hexInput.value=color.hex; applyCtx();
+}
+pickColor(1);
+
+// ── Egyéni színválasztó ──
+function setCustomColor(hex){
+  if(!/^#[0-9a-fA-F]{6}$/.test(hex))return false;
+  hex=hex.toLowerCase();
+  color={name:hex,hex};
+  grid.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active'));
+  activeDot.style.background=hex; activeName.textContent=hex;
+  colorPick.value=hex; hexInput.value=hex; applyCtx(); return true;
+}
+colorPick.addEventListener('input',()=>setCustomColor(colorPick.value));
+hexInput.addEventListener('input',()=>{
+  let v=hexInput.value.trim(); if(v&&v[0]!=='#')v='#'+v;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)) setCustomColor(v);
+});
+
+// ── Szövegstílus ──
+const fontSel=document.getElementById('fontSel');
+fontSel.addEventListener('change',()=>{ textStyle.font=fontSel.value; if(textOverlay) styleOverlay(textOverlay.el); });
+[['boldBtn','bold'],['italicBtn','italic'],['underBtn','underline']].forEach(([id,key])=>{
+  document.getElementById(id).addEventListener('click',function(){
+    textStyle[key]=!textStyle[key]; this.classList.toggle('on',textStyle[key]);
+    if(textOverlay) styleOverlay(textOverlay.el);
+  });
+});
+
+// ── Méret / átlátszóság ──
+document.querySelectorAll('.size-pre').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.size-pre').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); size=+btn.dataset.size;
+    sizeSlider.value=size; sizeValEl.textContent=size; applyCtx();
+  });
+});
+sizeSlider.addEventListener('input',()=>{
+  size=+sizeSlider.value; sizeValEl.textContent=size;
+  document.querySelectorAll('.size-pre').forEach((b,i)=>b.classList.toggle('active',PRESET_SIZES[i]===size));
+  applyCtx();
+});
+opSlider.addEventListener('input',()=>{ alpha=+opSlider.value/100; opValEl.textContent=opSlider.value; applyCtx(); });
+
+// ── Effekt-kapcsolók ──
+document.querySelectorAll('.fx-row').forEach(row=>{
+  row.addEventListener('click',()=>{
+    const k=row.dataset.fx; fx[k]=!fx[k]; row.classList.toggle('on',fx[k]);
+    if(k==='kaleido'&&fx.kaleido){ fx.symmetry=false; document.querySelector('[data-fx="symmetry"]').classList.remove('on'); }
+    if(k==='symmetry'&&fx.symmetry){ fx.kaleido=false; document.querySelector('[data-fx="kaleido"]').classList.remove('on'); }
+    if(k==='grid') wrap.classList.toggle('grid-on',fx.grid);
+    applyCtx();
+  });
+});
+
+// ── Műveletek ──
+document.getElementById('undoBtn').addEventListener('click',undo);
+document.getElementById('redoBtn').addEventListener('click',redo);
+document.getElementById('clearBtn').addEventListener('click',()=>{ saveH(); ctx.clearRect(0,0,canvas.width,canvas.height); applyCtx(); toast('Réteg törölve'); });
+document.getElementById('addLayerBtn').addEventListener('click',addLayer);
+layerOpSlider.addEventListener('input',()=>{
+  layers[activeLayer].opacity=+layerOpSlider.value/100;
+  layerOpValEl.textContent=layerOpSlider.value; restackLayers();
+});
+document.getElementById('saveBtn').addEventListener('click',()=>saveCanvas(false));
+document.getElementById('saveTransBtn').addEventListener('click',()=>saveCanvas(true));
+async function saveCanvas(transparent){
+  const tmp=document.createElement('canvas'); tmp.width=canvas.width; tmp.height=canvas.height;
+  const tc=tmp.getContext('2d');
+  if(!transparent){ tc.fillStyle=getComputedStyle(wrap).backgroundColor; tc.fillRect(0,0,tmp.width,tmp.height); }
+  layers.forEach(l=>{ if(l.visible){ tc.globalAlpha=l.opacity; tc.drawImage(l.canvas,0,0); } });
+  tc.globalAlpha=1;
+  const url=tmp.toDataURL('image/png');
+  const fn=transparent?'studio-rajz-atlatszo.png':'studio-rajz.png';
+  try{
+    const downloads = window.claude && claude.use && await claude.use('downloads');
+    if(downloads){ await downloads.save({filename:fn,data:url}); toast('Mentve: '+fn); return; }
+  }catch(err){ toast('Mentés megszakítva'); return; }
+  const a=document.createElement('a'); a.download=fn; a.href=url; a.click();
+  toast('Mentés elindítva');
+}
+
+// ── Kép importálása (új rétegre, méretre igazítva) ──
+function placeImage(img,name){
+  const nm=(name||'Kép').slice(0,16)||'Kép';
+  layers.push(makeLayer(nm)); restackLayers(); setActive(layers.length-1);
+  const cw=canvas.width, ch=canvas.height;
+  const sc=Math.min(cw/img.width, ch/img.height, 1);
+  const w=img.width*sc, h=img.height*sc, ox=(cw-w)/2, oy=(ch-h)/2;
+  saveH(); ctx.drawImage(img,ox,oy,w,h);
+  toast('Kép betöltve: '+nm);
+}
+function loadImageSrc(src,name){
+  if(typeof src!=='string'||!(/^data:image\//.test(src)||/^blob:/.test(src))){ toast('Érvénytelen képforrás'); return; }
+  const img=new Image();
+  img.onload=()=>placeImage(img,name);
+  img.onerror=()=>toast('Nem sikerült betölteni a képet');
+  img.src=src;
+}
+function loadImageFile(file){
+  if(!file||!/^image\//.test(file.type)){ toast('Nem képfájl'); return; }
+  const reader=new FileReader();
+  reader.onload=()=>loadImageSrc(reader.result,(file.name||'Kép').replace(/\.[^.]+$/,''));
+  reader.onerror=()=>toast('Fájlolvasási hiba');
+  reader.readAsDataURL(file);
+}
+const imgInput=document.getElementById('imgInput');
+document.getElementById('imgBtn').addEventListener('click',()=>imgInput.click());
+imgInput.addEventListener('change',()=>{ if(imgInput.files&&imgInput.files[0]) loadImageFile(imgInput.files[0]); imgInput.value=''; });
+wrap.addEventListener('dragover',e=>e.preventDefault());
+wrap.addEventListener('drop',e=>{ e.preventDefault(); const f=e.dataTransfer&&e.dataTransfer.files[0]; if(f) loadImageFile(f); });
+document.addEventListener('paste',e=>{
+  const items=e.clipboardData&&e.clipboardData.items; if(!items)return;
+  for(const it of items){ if(it.type&&it.type.indexOf('image')===0){ const f=it.getAsFile(); if(f){ e.preventDefault(); loadImageFile(f); } return; } }
+});
+// Külső forrás (pl. saját böngésző-bővítmény) képet küldhet be postMessage-dzsel:
+//   targetWindow.postMessage({ type:'studio-canvas-image', data:'<data:image/png;base64,...>', name:'kivagas' }, '*')
+window.addEventListener('message',e=>{
+  const d=e.data;
+  if(d&&d.type==='studio-canvas-image'&&typeof d.data==='string'&&/^data:image\//.test(d.data)){
+    loadImageSrc(d.data, typeof d.name==='string'?d.name:'Beszúrt kép');
+    try{ if(e.source&&e.source.postMessage) e.source.postMessage({type:'studio-canvas-ack',ok:true},'*'); }catch(_){}
+  }
+});
+
+// ── Témaváltó ──
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  let next;
+  if(cur==='dark') next='light';
+  else if(cur==='light') next='dark';
+  else next = matchMedia('(prefers-color-scheme: light)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme',next);
+  toast(next==='dark'?'Sötét téma':'Világos téma');
+});
+
+// ── Vászon események ──
+wrap.addEventListener('mousedown',onDown);
+wrap.addEventListener('mousemove',onMove);
+wrap.addEventListener('mouseup',onUp);
+wrap.addEventListener('mouseleave',onUp);
+wrap.addEventListener('touchstart',e=>{e.preventDefault();onDown(e);},{passive:false});
+wrap.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
+wrap.addEventListener('touchend',e=>{ if(e.changedTouches.length){const t=e.changedTouches[0];onUp({clientX:t.clientX,clientY:t.clientY});} else onUp(e); });
+wrap.addEventListener('touchcancel',onUp);
+wrap.addEventListener('mouseenter',()=>{ if(BRUSH_TOOLS.has(tool)) ring.style.display='block'; });
+wrap.addEventListener('mouseleave',()=>{ ring.style.display='none'; });
+
+// ── Billentyűparancsok ──
+const KMAP={p:'pen',e:'eraser',h:'highlighter',b:'spray',n:'neon',r:'rainbow',c:'calli',t:'text',g:'fill',i:'eyedrop',l:'line',a:'arrow',s:'star',f:'fire',d:'gradient'};
+document.addEventListener('keydown',e=>{
+  if(textOverlay)return;
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); return; }
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const k=e.key.toLowerCase();
+  if(KMAP[k]) selectTool(KMAP[k]);
+});
+
+// ── Init ──
+layers.push(makeLayer('Alap')); setActive(0); restackLayers();
+window.addEventListener('resize',resize);
+resize();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
